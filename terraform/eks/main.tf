@@ -1,8 +1,20 @@
-provider "aws" {
-  region = "us-east-1"
+terraform {
+  backend "s3" {
+    bucket         = "terraform-bucket-tf-luis" 
+    key            = "eks/terraform.tfstate"            
+    region         = "us-east-1"
+    encrypt        = true                               
+    # dynamodb_table = "terraform-locks"               
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
 }
 
-# 1. Crear una VPC básica
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
@@ -17,7 +29,6 @@ module "vpc" {
   enable_nat_gateway = true
 }
 
-# 2. Crear el clúster EKS
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.0.0"
@@ -29,7 +40,6 @@ module "eks" {
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.intra_subnets
 
-  # Nodos de trabajo (Usamos t3.medium que son baratos)
   eks_managed_node_groups = {
     default = {
       min_size     = 1
