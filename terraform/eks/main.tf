@@ -40,6 +40,8 @@ module "eks" {
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.intra_subnets
 
+  enable_cluster_creator_admin_permissions = true
+
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
