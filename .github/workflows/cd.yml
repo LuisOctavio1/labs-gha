@@ -22,7 +22,7 @@ jobs:
                 aws-region: us-east-1
             
             - name: configure kubeconfig
-              run: aws eks update-kubeconfig --name demo-cluster --region us-east-1
+              run: aws eks update-kubeconfig --name demo-cluster-x --region us-east-1
             
             - name: get image uri
               run: |
