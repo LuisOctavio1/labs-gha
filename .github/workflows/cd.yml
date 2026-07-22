@@ -1,0 +1,38 @@
+name: CD workflows
+
+on:
+    workflow_run:
+        workflows: ["ci workflow"]
+        types:
+            - completed
+
+jobs:
+    deploy-to-kubernetes:
+        runs-on: ubuntu-latest
+        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+        steps:
+            - name: checkout
+              uses: actions/checkout@v4
+
+            - name: aws login
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                aws-region: us-east-1
+            
+            - name: configure kubeconfig
+              run: aws eks update-kubeconfig --name demo-cluster --region us-east-1
+            
+            - name: get image uri
+              run: |
+                AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+                ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/k8s-python-api:${{ github.event.workflow_run.head_sha }}"
+                sed -i "s|IMAGE_PLACEHOLDER|$ECR_URI|g" k8s/deployment.yaml
+                echo "checking the change in deployment.yaml:"
+                grep "image:" k8s/deployment.yaml
+
+            - name: apply changes in cluster
+              run: |
+                kubectl apply -f k8s/
+                kubectl rollout status deployment/python-api --timeout=120s
