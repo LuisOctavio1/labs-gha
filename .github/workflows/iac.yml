@@ -71,6 +71,25 @@ jobs:
         
       - name: run terraform init
         run: terraform init
+      
+      - name: Clean up dynamic EKS resources
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name demo-cluster-x
+          
+          echo "deleting Ingresses..."
+          kubectl delete ingress --all --all-namespaces || true
+          
+          echo "deleting LoadBalancers..."
+          kubectl get svc --all-namespaces -o json | jq -r '.items[] | select(.spec.type=="LoadBalancer") | "\(.metadata.namespace) \(.metadata.name)"' | while read ns name; do
+            if [ ! -z "$name" ]; then
+              kubectl delete svc $name -n $ns || true
+            fi
+          done
+          
+          echo "deleting PVCs..."
+          kubectl delete pvc --all --all-namespaces || true
+          
+          sleep 90
 
       - name: run terraform destroy
         run: terraform destroy -auto-approve
